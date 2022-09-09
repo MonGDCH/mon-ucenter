@@ -1,0 +1,29 @@
+{
+    "name": "mongdch/mon-ucenter",
+    "description": "The user center sdk",
+    "license": "MIT",
+    "homepage": "http://gdmon.com/",
+    "keywords": [
+        "Mon",
+        "user center",
+        "ucenter"
+    ],
+    "authors": [
+        {
+            "name": "Mon",
+            "email": "985558837@qq.com",
+            "homepage": "http://www.gdmon.com/",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": ">=7.0.0",
+        "mongdch/mon-util": "^1.3",
+        "mongdch/mon-orm": "^2.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "mon\\ucenter\\": "src/"
+        }
+    }
+}
