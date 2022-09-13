@@ -7,6 +7,10 @@ namespace mon\ucenter;
 use PDO;
 use mon\orm\Db;
 use mon\util\Instance;
+use mon\ucenter\model\UserModel;
+use mon\ucenter\model\UserLoginLogModel;
+use mon\ucenter\model\UserOpenAccountModel;
+use mon\ucenter\model\UserRealnameAuthModel;
 
 /**
  * 用户中心
@@ -100,6 +104,13 @@ class UCenter
     ];
 
     /**
+     * 模型缓存
+     *
+     * @var array
+     */
+    protected $models = [];
+
+    /**
      * 构造方法
      *
      * @param array $config 配置信息
@@ -175,5 +186,61 @@ class UCenter
     {
         $this->config = array_merge($this->config, $config);
         return $this;
+    }
+
+    /**
+     * 获取用户模型
+     *
+     * @return UserModel
+     */
+    public function user(): UserModel
+    {
+        if (!isset($this->models['user'])) {
+            $this->models['user'] = new UserModel;
+        }
+
+        return $this->models['user'];
+    }
+
+    /**
+     * 获取用户登录记录模型
+     *
+     * @return UserLoginLogModel
+     */
+    public function loginLog(): UserLoginLogModel
+    {
+        if (!isset($this->models['loginlog'])) {
+            $this->models['loginlog'] = new UserLoginLogModel;
+        }
+
+        return $this->models['loginlog'];
+    }
+
+    /**
+     * 获取用户第三方账户信息模型
+     *
+     * @return UserOpenAccountModel
+     */
+    public function openAccount(): UserOpenAccountModel
+    {
+        if (!isset($this->models['openaccount'])) {
+            $this->models['openaccount'] = new UserOpenAccountModel;
+        }
+
+        return $this->models['openaccount'];
+    }
+
+    /**
+     * 获取用户实名认证模型
+     *
+     * @return UserRealnameAuthModel
+     */
+    public function realnameAuth(): UserRealnameAuthModel
+    {
+        if (!isset($this->models['realnameauth'])) {
+            $this->models['realnameauth'] = new UserRealnameAuthModel;
+        }
+
+        return $this->models['realnameauth'];
     }
 }

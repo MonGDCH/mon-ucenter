@@ -15,12 +15,17 @@ use Exception;
 class UCenterException extends Exception
 {
     /**
+     * 未初始化
+     */
+    const BOOTSTRAP_ERROR = 1001;
+
+    /**
      * 登录异常
      */
-    const LOGIN_ERROR = 1001;
+    const LOGIN_ERROR = 2001;
 
     /**
      * 重新提交审核异常
      */
-    const REALNAME_RESET_ERROR = 2002;
+    const REALNAME_RESET_ERROR = 3002;
 }

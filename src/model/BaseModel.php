@@ -44,7 +44,7 @@ abstract class BaseModel extends Model
     public function __construct()
     {
         if (!UCenter::instance()->isInit()) {
-            throw new UCenterException('未初始化');
+            throw new UCenterException('未初始化', UCenterException::BOOTSTRAP_ERROR);
         }
 
         $this->config = UCenter::instance()->getConfig('database');
