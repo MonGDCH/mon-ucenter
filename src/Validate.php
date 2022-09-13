@@ -38,7 +38,7 @@ class Validate extends \mon\util\Validate
         'comment'       => ['str', 'maxLength:200'],
 
         'register_type' => ['required', 'int', 'min:0'],
-        'login_type'    => ['required', 'in:1,2'],
+        'login_type'    => ['required', 'int', 'min:0'],
 
         // 实名认证
         'auth_type'     => ['required', 'in:0,1'],
@@ -116,10 +116,10 @@ class Validate extends \mon\util\Validate
      * @var array
      */
     public $scope = [
-        'pwd'           => ['idx', 'password'],
-        'password'      => ['idx', 'password', 'old_password'],
-        'edit'          => ['idx', 'email', 'moble', 'nickname', 'level', 'avatar', 'sex', 'comment', 'status'],
-        'status'        => ['idx', 'status'],
+        'pwd'           => ['password'],
+        'password'      => ['password', 'old_password'],
+        'edit'          => ['email', 'moble', 'nickname', 'level', 'avatar', 'sex', 'comment', 'status'],
+        'status'        => ['status'],
         'register'      => ['register_type', 'username', 'password'],
         'login'         => ['username', 'password', 'login_type'],
 

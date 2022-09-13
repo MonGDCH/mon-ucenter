@@ -117,17 +117,16 @@ class UserLoginLogModel extends BaseModel
     /**
      * 查询日志列表
      *
-     * @param array $option 请求参数
+     * @param array $where      查询条件
+     * @param integer $limit    分页显示数
+     * @param integer $page     分页数
      * @return array
      */
-    public function queryList(array $option): array
+    public function queryList(array $where, int $limit = 10, int $page = 1): array
     {
-        $limit = isset($option['limit']) ? intval($option['limit']) : 10;
-        $page = isset($option['page']) ? intval($option['page']) : 1;
-
         // 查询
-        $list = $this->scope('list', $option)->page($page, $limit)->order('id', 'DESC')->select();
-        $total = $this->scope('list', $option)->count();
+        $list = $this->scope('list', $where)->page($page, $limit)->order('id', 'DESC')->select();
+        $total = $this->scope('list', $where)->count();
 
         return [
             'list'      => $list,
@@ -146,7 +145,7 @@ class UserLoginLogModel extends BaseModel
      */
     protected function scopeList($query, $args)
     {
-        $field = ['log.*', 'user.nickname', 'user.email', 'user.moble'];
+        $field = ['log.*', 'user.username', 'user.nickname', 'user.email', 'user.moble'];
         $query->alias('log')->join(UserModel::instance()->getTable() . ' user', 'log.uid=user.id', 'left')->field($field);
         // 按邮箱
         if (isset($args['email']) && is_string($args['email']) && !empty($args['email'])) {

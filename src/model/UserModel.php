@@ -31,7 +31,7 @@ class UserModel extends BaseModel
     /**
      * 查询信息
      *
-     * @param array $where where条件
+     * @param array $where 查询条件
      * @param array $field 查询字段
      * @return array
      */
@@ -43,17 +43,16 @@ class UserModel extends BaseModel
     /**
      * 查询用户列表
      *
-     * @param array $option 请求参数
-     * @param boolean $forGroup 是否为组别查询
+     * @param array $where      查询条件
+     * @param integer $limit    分页显示数
+     * @param integer $page     分页数
      * @return array
      */
-    public function queryList(array $option = []): array
+    public function queryList(array $where = [], int $limit = 10, int $page = 1): array
     {
-        $limit = isset($option['limit']) ? intval($option['limit']) : 10;
-        $page = isset($option['page']) && is_numeric($option['page']) ? intval($option['page']) : 1;
         // 查询
-        $list = $this->scope('list', $option)->page($page, $limit)->select();
-        $total = $this->scope('list', $option)->count('user.id');
+        $list = $this->scope('list', $where)->page($page, $limit)->select();
+        $total = $this->scope('list', $where)->count('user.id');
 
         return [
             'list'      => $list,
@@ -128,33 +127,35 @@ class UserModel extends BaseModel
             }
             return false;
         }
+        // 登录日志模型
+        $loginLogModel = UCenter::instance()->loginLog();
         // 验证账号是否禁止登录
-        if (!UserLoginLogModel::instance()->checkDisableAccount($userInfo['id'])) {
-            $this->error = UserLoginLogModel::instance()->getError();
+        if (!$loginLogModel->checkDisableAccount($userInfo['id'])) {
+            $this->error = $loginLogModel->getError();
             return false;
         }
         // 验证密码
         if ($userInfo['password'] != $this->encodePassword($option['password'], $userInfo['salt'])) {
             // 记录登录错误日志
-            UserLoginLogModel::instance()->record([
-                'uid' => $userInfo['id'],
-                'type' => 2,
-                'action' => '登录密码错误',
-                'ip' => $ip,
-                'ua' => $ua
+            $loginLogModel->record([
+                'uid'       => $userInfo['id'],
+                'type'      => 2,
+                'action'    => '登录密码错误',
+                'ip'        => $ip,
+                'ua'        => $ua
             ]);
             $this->error = '用户名密码错误';
             return false;
         }
 
         // 定义登陆信息
-        $loginTime = time();
+        $login_time = time();
         $login_token = $this->encodeLoginToken($userInfo['id'], $ip);
         $this->startTrans();
         try {
             // 更新用户信息
             $saveLogin = $this->save([
-                'login_time'    => $loginTime,
+                'login_time'    => $login_time,
                 'login_ip'      => $ip,
                 'login_token'   => $login_token
             ], ['id' => $userInfo['id']]);
@@ -165,12 +166,12 @@ class UserModel extends BaseModel
             }
 
             // 记录登录日志
-            $record = UserLoginLogModel::instance()->record([
-                'uid' => $userInfo['id'],
-                'type' => 2,
-                'action' => '登录成功',
-                'ip' => $ip,
-                'ua' => $ua
+            $record = $loginLogModel->record([
+                'uid'       => $userInfo['id'],
+                'type'      => 1,
+                'action'    => '登录成功',
+                'ip'        => $ip,
+                'ua'        => $ua
             ]);
             if (!$record) {
                 $this->rollback();
@@ -180,7 +181,7 @@ class UserModel extends BaseModel
 
             $this->commit();
 
-            $userInfo['login_time'] = $loginTime;
+            $userInfo['login_time'] = $login_time;
             $userInfo['login_ip'] = $ip;
             $userInfo['login_token'] = $login_token;
             return $userInfo;
@@ -201,8 +202,12 @@ class UserModel extends BaseModel
      */
     public function add(array $option, bool $useDefaultPwd = false, string $ip = '', array $allow = [])
     {
-        if ((!isset($option['email']) || empty($option['email'])) && (!isset($option['moble']) || empty($option['moble']))) {
-            $this->error = '邮箱或者手机号必须设置一种';
+        if (
+            (!isset($option['email']) || empty($option['email'])) &&
+            (!isset($option['moble']) || empty($option['moble'])) &&
+            (!isset($option['username']) || empty($option['username']))
+        ) {
+            $this->error = '账号、邮箱或者手机号必须设置一种';
             return false;
         }
 
@@ -297,9 +302,17 @@ class UserModel extends BaseModel
         ];
         switch ($option['register_type']) {
             case '1':
+                if (!check('moble', $option['username'])) {
+                    $this->error = '请输入合法的手机号码';
+                    return false;
+                }
                 $saveField['moble'] = $option['username'];
                 break;
             case '2':
+                if (!check('email', $option['username'])) {
+                    $this->error = '请输入合法的邮箱地址';
+                    return false;
+                }
                 $saveField['email'] = $option['username'];
                 break;
             case '3':
@@ -335,10 +348,11 @@ class UserModel extends BaseModel
      * 修改用户信息
      *
      * @param array $option 请求参数
+     * @param integer $uid  用户ID
      * @param array $allow  数据库运行操作的字段
      * @return boolean
      */
-    public function edit(array $option, array $allow): bool
+    public function edit(array $option, int $uid, array $allow = []): bool
     {
         $check = $this->validate()->data($option)->scope('edit')->check();
         if (!$check) {
@@ -347,14 +361,14 @@ class UserModel extends BaseModel
         }
 
         // 获取用户信息
-        $info = $this->getInfo(['id' => $option['id']]);
+        $info = $this->getInfo(['id' => $uid]);
         if (!$info) {
             $this->error = '获取用户信息失败';
             return false;
         }
 
         // $allow = ['email', 'moble', 'nickname', 'level', 'avatar', 'sex', 'comment', 'status'];
-        $save = $this->allowField($allow)->save($option, ['id' => $option['id']]);
+        $save = $this->allowField($allow)->save($option, ['id' => $uid]);
         if (!$save) {
             $this->error = '修改用户信息失败';
             return false;
@@ -367,11 +381,12 @@ class UserModel extends BaseModel
      * 修改、重置密码
      *
      * @param array $option 请求参数
+     * @param integer $uid  用户ID
      * @param boolean $check_old_pwd 是否验证旧密码
      * @param boolean $is_pay_password 修改的密码是否为交易密码
      * @return boolean
      */
-    public function changePassword(array $option, bool $check_old_pwd = true, bool $is_pay_password = false): bool
+    public function changePassword(array $option, int $uid, bool $check_old_pwd = true, bool $is_pay_password = false): bool
     {
         $scope = $check_old_pwd ? 'password' : 'pwd';
         $check = $this->validate()->data($option)->scope($scope)->check();
@@ -380,7 +395,7 @@ class UserModel extends BaseModel
             return false;
         }
         // 获取用户信息
-        $info = $this->getInfo(['id' => $option['id']]);
+        $info = $this->getInfo(['id' => $uid]);
         if (!$info) {
             $this->error = '获取用户信息失败';
             return false;
@@ -401,7 +416,7 @@ class UserModel extends BaseModel
         }
 
         // 修改密码
-        $save = $this->save([$field => $password], ['id' => $option['id']]);
+        $save = $this->save([$field => $password], ['id' => $uid]);
         if (!$save) {
             $this->error = '修改密码失败';
             return false;
@@ -413,12 +428,12 @@ class UserModel extends BaseModel
     /**
      * 更改绑定邮箱、手机号
      *
-     * @param integer $id 用户ID
+     * @param integer $uid 用户ID
      * @param string $account 账号
      * @param integer $type 1手机号 2邮箱
      * @return boolean
      */
-    public function changeBindAccount(int $id, string $account, int $type = 1): bool
+    public function changeBindAccount(int $uid, string $account, int $type = 1): bool
     {
         switch ($type) {
             case '1':
@@ -440,14 +455,14 @@ class UserModel extends BaseModel
                 return false;
         }
         // 判断是否已使用
-        $info = $this->where($field, $account)->where('id', '<>', $id)->find();
+        $info = $this->where($field, $account)->where('id', '<>', $uid)->find();
         if ($info) {
             $this->error = '更改的绑定信息其他账号已使用';
             return false;
         }
 
         // 修改绑定信息
-        $save = $this->save([$field => $account], ['id' => $id]);
+        $save = $this->save([$field => $account], ['id' => $uid]);
         if (!$save) {
             $this->error = '更改绑定信息失败';
             return false;
@@ -460,9 +475,10 @@ class UserModel extends BaseModel
      * 修改用户状态
      *
      * @param array $option 请求参数
+     * @param integer $uid  用户ID
      * @return boolean
      */
-    public function changeStatus(array $option): bool
+    public function changeStatus(array $option, int $uid): bool
     {
         $check = $this->validate()->data($option)->scope('status')->check();
         if (!$check) {
@@ -470,7 +486,7 @@ class UserModel extends BaseModel
             return false;
         }
         // 获取用户信息
-        $info = $this->getInfo(['id' => $option['idx']]);
+        $info = $this->getInfo(['id' => $uid]);
         if (!$info) {
             $this->error = '获取用户信息失败';
             return false;
@@ -481,7 +497,7 @@ class UserModel extends BaseModel
         }
 
         // 修改状态
-        $save = $this->save(['status' => $option['status']], ['id' => $option['idx']]);
+        $save = $this->save(['status' => $option['status']], ['id' => $uid]);
         if (!$save) {
             $this->error = '修改用户状态失败';
             return false;
@@ -529,12 +545,12 @@ class UserModel extends BaseModel
     /**
      * 获取用户ID转换的邀请码
      *
-     * @param integer $id  用户ID
+     * @param integer $uid  用户ID
      * @return string
      */
-    public function getInviteCode(int $id): string
+    public function getInviteCode(int $uid): string
     {
-        $uid = intval($id) + UCenter::instance()->getConfig('inviter_code', 0);
+        $uid = intval($uid) + UCenter::instance()->getConfig('inviter_code', 0);
         return IdCode::instance()->id2code($uid);
     }
 
