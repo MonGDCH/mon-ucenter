@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace mon\ucenter\model;
 
-use mon\util\Instance;
-use mon\ucenter\UserCenter;
+use mon\ucenter\UCenter;
 use mon\orm\exception\DbException;
+use mon\ucenter\exception\UCenterException;
 
 /**
  * 用户实名认证模型
@@ -16,8 +16,6 @@ use mon\orm\exception\DbException;
  */
 class UserRealnameAuthModel extends BaseModel
 {
-    use Instance;
-
     /**
      * 构造方法
      */
@@ -25,7 +23,7 @@ class UserRealnameAuthModel extends BaseModel
     {
         parent::__construct();
         // 定义表名
-        $this->table = UserCenter::instance()->getConfig('table.user_realname_auth');
+        $this->table = UCenter::instance()->getConfig('table.user_realname_auth');
     }
 
     /**
@@ -33,9 +31,10 @@ class UserRealnameAuthModel extends BaseModel
      *
      * @param array $option 审核登记参数
      * @param integer $uid  用户ID
+     * @param array $allow  数据库运行操作的字段
      * @return boolean
      */
-    public function record(array $option, int $uid): bool
+    public function record(array $option, int $uid, array $allow = []): bool
     {
         if (!isset($option['auth_type'])) {
             $this->error = '认证参数异常';
@@ -64,12 +63,12 @@ class UserRealnameAuthModel extends BaseModel
             $this->error = '已提交实名认证审核登记，请勿重复提交';
             return false;
         }
+        // $allow = [
+        //     'uid', 'auth_type', 'real_name', 'identity', 'id_card_front', 'id_card_back',
+        //     'id_card_hand', 'license', 'contact_person', 'contact_mobile', 'contact_email'
+        // ];
+
         // 保存记录
-        // Log::instance()->oss(__FILE__, __LINE__, 'record user realname auth info', 'sql');
-        $allow = [
-            'uid', 'auth_type', 'real_name', 'identity', 'id_card_front', 'id_card_back',
-            'id_card_hand', 'license', 'contact_person', 'contact_mobile', 'contact_email'
-        ];
         $option['uid'] = $uid;
         $save = $this->allowField($allow)->save($option);
         if (!$save) {
@@ -85,6 +84,7 @@ class UserRealnameAuthModel extends BaseModel
      *
      * @param array $option 审核登记参数
      * @param integer $uid  用户ID
+     * @throws UCenterException
      * @return boolean
      */
     public function restore(array $option, int $uid): bool
@@ -100,7 +100,6 @@ class UserRealnameAuthModel extends BaseModel
             return false;
         }
 
-        // Log::instance()->oss(__FILE__, __LINE__, 'restore user realname auth', 'info');
         $this->startTrans();
         try {
             $del = $this->where('uid', $uid)->delete();
@@ -120,9 +119,7 @@ class UserRealnameAuthModel extends BaseModel
             return true;
         } catch (DbException $e) {
             $this->rollback();
-            $this->error = '重新提交审核异常';
-            // Log::instance()->oss(__FILE__, __LINE__, 'restore user realname auth exception, msg => ' . $e->getMessage(), 'error');
-            return false;
+            throw new UCenterException('重新提交审核异常', UCenterException::REALNAME_RESET_ERROR, $e);
         }
     }
 

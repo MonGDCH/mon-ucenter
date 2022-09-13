@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace mon\ucenter\model;
 
-use mon\util\Instance;
-use mon\ucenter\UserCenter;
+use mon\ucenter\UCenter;
 
 /**
  * 用户登录日志模型
@@ -15,8 +14,6 @@ use mon\ucenter\UserCenter;
  */
 class UserLoginLogModel extends BaseModel
 {
-    use Instance;
-
     /**
      * 构造方法
      */
@@ -24,7 +21,7 @@ class UserLoginLogModel extends BaseModel
     {
         parent::__construct();
         // 定义表名
-        $this->table = UserCenter::instance()->getConfig('table.user_login_log');
+        $this->table = UCenter::instance()->getConfig('table.user_login_log');
     }
 
     /**
@@ -35,7 +32,7 @@ class UserLoginLogModel extends BaseModel
      */
     public function checkDisableAccount(int $uid): bool
     {
-        $config = UserCenter::instance()->getConfig('login_faild');
+        $config = UCenter::instance()->getConfig('login_faild');
         $start_time = time() - (60 * $config['login_gap']);
         $count = $this->where('create_time', '>=', $start_time)->where('uid', $uid)->where('type', '>', 1)
             ->order('id', 'desc')->limit($config['account_error_limit'])->count();
@@ -57,7 +54,7 @@ class UserLoginLogModel extends BaseModel
      */
     public function checkDisableIP(string $ip): bool
     {
-        $config = UserCenter::instance()->getConfig('login_faild');
+        $config = UCenter::instance()->getConfig('login_faild');
         $start_time = time() - ($config['login_gap'] * 60);
         $count = $this->where('create_time', '>=', $start_time)->where('ip', $ip)->where('type', '>', 1)
             ->order('id', 'desc')->limit($config['ip_error_limit'])->count();

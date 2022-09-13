@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace mon\ucenter\model;
 
-use Exception;
 use mon\orm\Model;
+use mon\ucenter\UCenter;
 use mon\ucenter\Validate;
-use mon\ucenter\UserCenter;
+use mon\ucenter\exception\UCenterException;
 
 /**
  * 模型基类
@@ -43,11 +43,11 @@ abstract class BaseModel extends Model
      */
     public function __construct()
     {
-        if (!UserCenter::instance()->isInit()) {
-            throw new Exception('未初始化');
+        if (!UCenter::instance()->isInit()) {
+            throw new UCenterException('未初始化');
         }
 
-        $this->config = UserCenter::instance()->getConfig('database');
+        $this->config = UCenter::instance()->getConfig('database');
     }
 
     /**

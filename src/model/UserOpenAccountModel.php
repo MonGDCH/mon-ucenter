@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace mon\ucenter\model;
 
-use mon\util\Instance;
-use mon\ucenter\UserCenter;
+use mon\ucenter\UCenter;
 
 /**
  * 第三方账户模型
@@ -15,8 +14,6 @@ use mon\ucenter\UserCenter;
  */
 class UserOpenAccountModel extends BaseModel
 {
-    use Instance;
-
     /**
      * 构造方法
      */
@@ -24,7 +21,7 @@ class UserOpenAccountModel extends BaseModel
     {
         parent::__construct();
         // 定义表名
-        $this->table = UserCenter::instance()->getConfig('table.user_open_account');
+        $this->table = UCenter::instance()->getConfig('table.user_open_account');
     }
 
     /**

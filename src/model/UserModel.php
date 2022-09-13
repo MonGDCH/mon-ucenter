@@ -6,9 +6,9 @@ namespace mon\ucenter\model;
 
 use mon\util\IdCode;
 use mon\util\Common;
-use mon\util\Instance;
-use mon\ucenter\UserCenter;
+use mon\ucenter\UCenter;
 use mon\orm\exception\DbException;
+use mon\ucenter\exception\UCenterException;
 
 /**
  * 用户模型
@@ -18,8 +18,6 @@ use mon\orm\exception\DbException;
  */
 class UserModel extends BaseModel
 {
-    use Instance;
-
     /**
      * 构造方法
      */
@@ -27,7 +25,7 @@ class UserModel extends BaseModel
     {
         parent::__construct();
         // 定义表名
-        $this->table = UserCenter::instance()->getConfig('table.user');
+        $this->table = UCenter::instance()->getConfig('table.user');
     }
 
     /**
@@ -71,6 +69,7 @@ class UserModel extends BaseModel
      * @param array $option 登录参数
      * @param string $ip    登录客户端IP
      * @param string $ua    登录客户端ua
+     * @throws UCenterException
      * @return mixed 成功返回登录信息，失败返回false
      */
     public function login(array $option, string $ip = '', string $ua = '')
@@ -83,6 +82,7 @@ class UserModel extends BaseModel
         // 获取用户信息
         switch ($option['login_type']) {
             case '1':
+                // 手机号登录
                 if (!check('moble', $option['username'])) {
                     $this->error = '请输入合法的手机号码';
                     return false;
@@ -90,11 +90,16 @@ class UserModel extends BaseModel
                 $where['moble'] = $option['username'];
                 break;
             case '2':
+                // 邮箱登录
                 if (!check('email', $option['username'])) {
                     $this->error = '请输入合法的邮箱地址';
                     return false;
                 }
                 $where['emial'] = $option['username'];
+                break;
+            case '3':
+                // 用户名登录
+                $where['username'] = $option['username'];
                 break;
             default:
                 $this->error = '未知登录方式';
@@ -142,13 +147,11 @@ class UserModel extends BaseModel
             return false;
         }
 
-
         // 定义登陆信息
         $loginTime = time();
         $login_token = $this->encodeLoginToken($userInfo['id'], $ip);
         $this->startTrans();
         try {
-            // Log::instance()->oss(__FILE__, __LINE__, 'user login', 'sql');
             // 更新用户信息
             $saveLogin = $this->save([
                 'login_time'    => $loginTime,
@@ -183,9 +186,7 @@ class UserModel extends BaseModel
             return $userInfo;
         } catch (DbException $e) {
             $this->rollback();
-            $this->error = '登录异常';
-            // Log::instance()->oss(__FILE__, __LINE__, 'admin login exception, msg => ' . $e->getMessage(), 'error');
-            return false;
+            throw new UCenterException('登录异常', UCenterException::LOGIN_ERROR, $e);
         }
     }
 
@@ -195,9 +196,10 @@ class UserModel extends BaseModel
      * @param array $option 请求参数
      * @param boolean $useDefaultPwd 使用使用默认密码
      * @param string $ip    客户端IP
+     * @param array $allow  数据库运行操作的字段
      * @return integer|false 成功返回用户ID，失败返回false
      */
-    public function add(array $option, bool $useDefaultPwd = false, string $ip = '')
+    public function add(array $option, bool $useDefaultPwd = false, string $ip = '', array $allow = [])
     {
         if ((!isset($option['email']) || empty($option['email'])) && (!isset($option['moble']) || empty($option['moble']))) {
             $this->error = '邮箱或者手机号必须设置一种';
@@ -205,7 +207,7 @@ class UserModel extends BaseModel
         }
 
         // 判断使用默认密码
-        $password = isset($option['password']) ? $option['password'] : ($useDefaultPwd ? UserCenter::instance()->getConfig('default_password') : '');
+        $password = isset($option['password']) ? $option['password'] : ($useDefaultPwd ? UCenter::instance()->getConfig('default_password') : '');
         if (empty($password)) {
             $this->error = '密码不能为空';
             return false;
@@ -223,8 +225,8 @@ class UserModel extends BaseModel
                 $inviterList = explode(',', $inviterInfo['inviter_uid']);
                 array_unshift($inviterList, $inviter_uid);
                 // 层级截取
-                if (UserCenter::instance()->getConfig('inviter_level_limit', 0)) {
-                    $inviterList = array_slice($inviterList, 0, UserCenter::instance()->getConfig('inviter_level_limit'));
+                if (UCenter::instance()->getConfig('inviter_level_limit', 0)) {
+                    $inviterList = array_slice($inviterList, 0, UCenter::instance()->getConfig('inviter_level_limit'));
                 }
                 $inviter_uid = implode(',', $inviterList);
             }
@@ -249,13 +251,13 @@ class UserModel extends BaseModel
 
         // 判断是否存在avatar，不存在则使用默认头像avatar
         if (!isset($option['avatar']) || empty($option['avatar'])) {
-            $option['avatar'] = UserCenter::instance()->getConfig('default_avatar');
+            $option['avatar'] = UCenter::instance()->getConfig('default_avatar');
         }
 
-        $allow = [
-            'email', 'moble', 'password', 'pay_password', 'nickname', 'level', 'avatar',
-            'sex', 'salt', 'comment', 'register_type', 'register_ip', 'inviter_uid', 'status'
-        ];
+        // $allow = [
+        //     'email', 'moble', 'password', 'pay_password', 'nickname', 'level', 'avatar',
+        //     'sex', 'salt', 'comment', 'register_type', 'register_ip', 'inviter_uid', 'status'
+        // ];
         $add_uid = $this->allowField($allow)->save($option, null, 'id');
         if (!$add_uid) {
             $this->error = '用户新增失败';
@@ -270,9 +272,10 @@ class UserModel extends BaseModel
      *
      * @param array $option 注册参数
      * @param string $ip    客户端IP
+     * @param array $allow  数据库运行操作的字段
      * @return integer|false 成功返回用户ID，失败返回false
      */
-    public function register(array $option, string $ip = '')
+    public function register(array $option, string $ip = '', array $allow = [])
     {
         // 校验参数
         $check = $this->validate()->scope('register')->data($option)->check();
@@ -282,7 +285,7 @@ class UserModel extends BaseModel
         }
 
         // 判断是否需要填写邀请码
-        if (UserCenter::instance()->getConfig('force_invite_code', false) && (!isset($option['code']) || empty($option['code']))) {
+        if (UCenter::instance()->getConfig('force_invite_code', false) && (!isset($option['code']) || empty($option['code']))) {
             $this->error = '请输入邀请码';
             return false;
         }
@@ -298,6 +301,9 @@ class UserModel extends BaseModel
                 break;
             case '2':
                 $saveField['email'] = $option['username'];
+                break;
+            case '3':
+                $saveField['username'] = $option['username'];
                 break;
             default:
                 $this->error = '注册方式异常';
@@ -320,18 +326,19 @@ class UserModel extends BaseModel
             }
         }
         $saveField['inviter_uid'] = $invite_id;
-        $saveField['status'] = UserCenter::instance()->getConfig('register_user_status', 1);
+        $saveField['status'] = UCenter::instance()->getConfig('register_user_status', 1);
 
-        return $this->add($saveField, false, $ip);
+        return $this->add($saveField, false, $ip, $allow);
     }
 
     /**
      * 修改用户信息
      *
      * @param array $option 请求参数
+     * @param array $allow  数据库运行操作的字段
      * @return boolean
      */
-    public function edit(array $option): bool
+    public function edit(array $option, array $allow): bool
     {
         $check = $this->validate()->data($option)->scope('edit')->check();
         if (!$check) {
@@ -346,7 +353,7 @@ class UserModel extends BaseModel
             return false;
         }
 
-        $allow = ['email', 'moble', 'nickname', 'level', 'avatar', 'sex', 'comment', 'status'];
+        // $allow = ['email', 'moble', 'nickname', 'level', 'avatar', 'sex', 'comment', 'status'];
         $save = $this->allowField($allow)->save($option, ['id' => $option['id']]);
         if (!$save) {
             $this->error = '修改用户信息失败';
@@ -516,7 +523,7 @@ class UserModel extends BaseModel
     public function parseInviteCode(string $code): int
     {
         $uid = IdCode::instance()->code2id($code);
-        return $uid - UserCenter::instance()->getConfig('inviter_code', 0);
+        return $uid - UCenter::instance()->getConfig('inviter_code', 0);
     }
 
     /**
@@ -527,7 +534,7 @@ class UserModel extends BaseModel
      */
     public function getInviteCode(int $id): string
     {
-        $uid = intval($id) + UserCenter::instance()->getConfig('inviter_code', 0);
+        $uid = intval($id) + UCenter::instance()->getConfig('inviter_code', 0);
         return IdCode::instance()->id2code($uid);
     }
 
@@ -599,7 +606,7 @@ class UserModel extends BaseModel
      */
     protected function checkUniqueField(array $option, array $where = [])
     {
-        $uniqueFields = UserCenter::instance()->getConfig('unique_field', []);
+        $uniqueFields = UCenter::instance()->getConfig('unique_field', []);
         foreach ($uniqueFields as $field => $text) {
             if (isset($option[$field]) && !empty($option[$field])) {
                 // 存在需要唯一的字段，且字段值不为空

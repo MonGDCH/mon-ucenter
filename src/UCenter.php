@@ -14,7 +14,7 @@ use mon\util\Instance;
  * @author Mon <985558837@qq.com>
  * @version 1.0.0
  */
-class UserCenter
+class UCenter
 {
     use Instance;
 
@@ -74,6 +74,7 @@ class UserCenter
         'unique_field'          => [
             'email'     => '邮箱',
             'moble'     => '手机号',
+            'username'  => '用户名'
         ],
         // 用于加密生成推荐码的数值
         'inviter_code'          => 651423,
@@ -82,7 +83,7 @@ class UserCenter
         // 新增用户时，如未输入密码，默认的密码
         'default_password'      => '123456',
         // 注册时，是否强制要求填入邀请码(参数名：code)
-        'force_invite_code'       => false,
+        'force_invite_code'     => false,
         // 注册用户默认status状态
         'register_user_status'  => 1,
         // 默认用户头像
@@ -112,9 +113,9 @@ class UserCenter
     /**
      * 初始化
      *
-     * @return UserCenter
+     * @return UCenter
      */
-    public function init(): UserCenter
+    public function init(): UCenter
     {
         // 数据库断线重连
         if ($this->config['break_reconnect']) {
@@ -168,9 +169,9 @@ class UserCenter
      * 设置配置信息
      *
      * @param array $config 配置信息
-     * @return UserCenter
+     * @return UCenter
      */
-    public function setConfig(array $config): UserCenter
+    public function setConfig(array $config): UCenter
     {
         $this->config = array_merge($this->config, $config);
         return $this;
