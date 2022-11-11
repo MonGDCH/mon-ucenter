@@ -22,8 +22,6 @@ $config = [
         // 用户登录记录模型
         'user_login_log' => 'user_login_log'
     ],
-    // 数据库断开自动重连
-    'break_reconnect' => false,
     // 数据库配置
     'database' => [
         // 数据库类型，只支持mysql
@@ -81,7 +79,7 @@ $config = [
 ];
 
 // 定义配置，运行初始化
-\mon\ucenter\UCenter::instance()->setConfig($config)->init();
+\mon\ucenter\UCenter::instance()->init($config);
 
 ```
 
