@@ -27,10 +27,10 @@ class UserLoginLogModel extends BaseModel
     /**
      * 验证登录账号是否已超过登录错误次数限制
      *
-     * @param integer $uid 用户ID
+     * @param integer|string $uid 用户ID
      * @return boolean
      */
-    public function checkDisableAccount(int $uid): bool
+    public function checkDisableAccount($uid): bool
     {
         $config = UCenter::instance()->getConfig('login_faild');
         $start_time = time() - (60 * $config['login_gap']);
@@ -49,7 +49,7 @@ class UserLoginLogModel extends BaseModel
     /**
      * 验证IP是否禁止登陆
      *
-     * @param string $ip
+     * @param string $ip IP地址
      * @return boolean
      */
     public function checkDisableIP(string $ip): bool
@@ -105,8 +105,9 @@ class UserLoginLogModel extends BaseModel
             $info['content'] = $option['content'];
         }
 
-        $saveLogID = $this->save($info, null, 'id');
-        if (!$saveLogID) {
+        // 保存
+        $save = $this->save($info);
+        if (!$save) {
             $this->error = '记录登录日志失败';
             return false;
         }
@@ -122,17 +123,15 @@ class UserLoginLogModel extends BaseModel
      * @param integer $page     分页数
      * @return array
      */
-    public function queryList(array $where, int $limit = 10, int $page = 1): array
+    public function queryList(array $where = [], int $limit = 10, int $page = 1): array
     {
         // 查询
         $list = $this->scope('list', $where)->page($page, $limit)->order('id', 'DESC')->select();
         $total = $this->scope('list', $where)->count();
 
         return [
-            'list'      => $list,
-            'total'     => $total,
-            'pageSize'  => $limit,
-            'page'      => $page
+            'list'  => $list,
+            'total' => $total,
         ];
     }
 

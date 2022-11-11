@@ -30,20 +30,22 @@ class UserRealnameAuthModel extends BaseModel
      * 登记实名认证
      *
      * @param array $option 审核登记参数
-     * @param integer $uid  用户ID
+     * @param integer|string $uid  用户ID
      * @param array $allow  数据库运行操作的字段
      * @return boolean
      */
-    public function record(array $option, int $uid, array $allow = []): bool
+    public function record(array $option, $uid, array $allow = []): bool
     {
         if (!isset($option['auth_type'])) {
             $this->error = '认证参数异常';
             return false;
         }
         switch ($option['auth_type']) {
+            case 0:
             case '0':
                 $scope = 'userRealName';
                 break;
+            case 1:
             case '1':
                 $scope = 'comRealName';
                 break;
@@ -83,11 +85,11 @@ class UserRealnameAuthModel extends BaseModel
      * 重新提交审核
      *
      * @param array $option 审核登记参数
-     * @param integer $uid  用户ID
+     * @param integer|string $uid  用户ID
      * @throws UCenterException
      * @return boolean
      */
-    public function restore(array $option, int $uid): bool
+    public function restore(array $option, $uid): bool
     {
         // 判断是否已存在记录
         $info = $this->where('uid', $uid)->find();
@@ -126,12 +128,12 @@ class UserRealnameAuthModel extends BaseModel
     /**
      * 审核
      *
-     * @param integer $uid 用户ID
+     * @param integer|string $uid 用户ID
      * @param integer $status 审核状态，1通过2未通过
      * @param string $comment 备注
      * @return boolean
      */
-    public function confirm(int $uid, int $status, string $comment = ''): bool
+    public function confirm($uid, int $status, string $comment = ''): bool
     {
         // 判断是否已存在记录
         $info = $this->where('uid', $uid)->find();
@@ -147,6 +149,7 @@ class UserRealnameAuthModel extends BaseModel
             'comment'       => $comment,
         ];
         switch ($status) {
+            case 1:
             case '1':
                 // 审核通过，原状态为0或者1
                 if (!in_array($info['auth_status'], [0, 1])) {
@@ -155,6 +158,7 @@ class UserRealnameAuthModel extends BaseModel
                 }
                 $saveInfo['auth_time'] = time();
                 break;
+            case 2:
             case '2':
                 if ($info['auth_status'] != 0) {
                     $this->error = '已进行过审核，请勿重复审核';

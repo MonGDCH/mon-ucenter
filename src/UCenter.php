@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace mon\ucenter;
 
-use PDO;
-use mon\orm\Db;
 use mon\util\Instance;
 use mon\ucenter\model\UserModel;
 use mon\ucenter\model\UserLoginLogModel;
@@ -28,6 +26,7 @@ class UCenter
      * @var boolean
      */
     protected $init = false;
+
     /**
      * 配置信息
      *
@@ -45,8 +44,6 @@ class UCenter
             // 用户登录记录模型
             'user_login_log' => 'user_login_log'
         ],
-        // 数据库断开自动重连
-        'break_reconnect' => false,
         // 数据库配置
         'database' => [
             // 数据库类型，只支持mysql
@@ -66,7 +63,7 @@ class UCenter
             // 数据库编码默认采用utf8
             'charset'       => 'utf8mb4',
             // 返回结果集类型
-            'result_type'   => PDO::FETCH_ASSOC,
+            'result_type'   => \PDO::FETCH_ASSOC,
             // 是否开启读写分离
             'rw_separate'   => false,
             // 查询数据库连接配置，二维数组随机获取节点覆盖默认配置信息
@@ -111,30 +108,16 @@ class UCenter
     protected $models = [];
 
     /**
-     * 构造方法
-     *
-     * @param array $config 配置信息
-     */
-    protected function __construct(array $config = [])
-    {
-        // 定义配置
-        $this->config = array_merge($this->config, $config);
-    }
-
-    /**
      * 初始化
      *
      * @return UCenter
      */
-    public function init(): UCenter
+    public function init(array $config = []): UCenter
     {
-        // 数据库断线重连
-        if ($this->config['break_reconnect']) {
-            Db::reconnect(true);
-        }
+        // 设置配置信息
+        $this->setConfig($config);
         // 标志初始化
         $this->init = true;
-
         return $this;
     }
 

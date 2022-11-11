@@ -45,11 +45,11 @@ class UserOpenAccountModel extends BaseModel
     /**
      * 是否已绑定
      *
-     * @param integer $uid  用户ID
+     * @param integer|string $uid  用户ID
      * @param integer $platform 平台ID
      * @return boolean
      */
-    public function isBind(int $uid, int $platform): bool
+    public function isBind($uid, int $platform): bool
     {
         $isBind = $this->where('uid', $uid)->where('platform', $platform)->find();
         if (!$isBind) {
@@ -63,10 +63,10 @@ class UserOpenAccountModel extends BaseModel
      * 用户绑定平台openid
      *
      * @param array $option 绑定参数
-     * @param integer $uid  用户ID
+     * @param integer|string $uid  用户ID
      * @return boolean
      */
-    public function bind(array $option, int $uid): bool
+    public function bind(array $option, $uid): bool
     {
         $check = $this->validate()->data($option)->scope('bind')->check();
         if (!$check) {
@@ -96,11 +96,11 @@ class UserOpenAccountModel extends BaseModel
     /**
      * 解除绑定
      *
-     * @param integer $uid  用户ID
+     * @param integer|string $uid  用户ID
      * @param integer $platform 平台ID
      * @return boolean
      */
-    public function unbind(int $uid, int $platform): bool
+    public function unbind($uid, int $platform): bool
     {
         $check = $this->validate()->data(['platform' => $platform])->scope('platform')->check();
         if (!$check) {

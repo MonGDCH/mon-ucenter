@@ -55,10 +55,8 @@ class UserModel extends BaseModel
         $total = $this->scope('list', $where)->count('user.id');
 
         return [
-            'list'      => $list,
-            'total'     => $total,
-            'pageSize'  => $limit,
-            'page'      => $page
+            'list'  => $list,
+            'total' => $total,
         ];
     }
 
@@ -69,7 +67,7 @@ class UserModel extends BaseModel
      * @param string $ip    登录客户端IP
      * @param string $ua    登录客户端ua
      * @throws UCenterException
-     * @return mixed 成功返回登录信息，失败返回false
+     * @return array|false 成功返回登录信息，失败返回false
      */
     public function login(array $option, string $ip = '', string $ua = '')
     {
@@ -80,6 +78,7 @@ class UserModel extends BaseModel
         }
         // 获取用户信息
         switch ($option['login_type']) {
+            case 1:
             case '1':
                 // 手机号登录
                 if (!check('moble', $option['username'])) {
@@ -88,6 +87,7 @@ class UserModel extends BaseModel
                 }
                 $where['moble'] = $option['username'];
                 break;
+            case 2:
             case '2':
                 // 邮箱登录
                 if (!check('email', $option['username'])) {
@@ -96,6 +96,7 @@ class UserModel extends BaseModel
                 }
                 $where['emial'] = $option['username'];
                 break;
+            case 3:
             case '3':
                 // 用户名登录
                 $where['username'] = $option['username'];
@@ -112,12 +113,15 @@ class UserModel extends BaseModel
         // 判断用户状态
         if ($userInfo['status'] != '1') {
             switch ($userInfo['status']) {
+                case 0:
                 case '0':
                     $this->error = '用户审核中';
                     break;
+                case 2:
                 case '2':
                     $this->error = '用户已禁用';
                     break;
+                case 3:
                 case '3':
                     $this->error = '用户审核未通过';
                     break;
@@ -198,7 +202,7 @@ class UserModel extends BaseModel
      * @param boolean $useDefaultPwd 使用使用默认密码
      * @param string $ip    客户端IP
      * @param array $allow  数据库运行操作的字段
-     * @return integer|false 成功返回用户ID，失败返回false
+     * @return integer|string|false 成功返回用户ID，失败返回false
      */
     public function add(array $option, bool $useDefaultPwd = false, string $ip = '', array $allow = [])
     {
@@ -278,7 +282,7 @@ class UserModel extends BaseModel
      * @param array $option 注册参数
      * @param string $ip    客户端IP
      * @param array $allow  数据库运行操作的字段
-     * @return integer|false 成功返回用户ID，失败返回false
+     * @return integer|string|false 成功返回用户ID，失败返回false
      */
     public function register(array $option, string $ip = '', array $allow = [])
     {
@@ -301,6 +305,7 @@ class UserModel extends BaseModel
             'register_type' => $option['register_type']
         ];
         switch ($option['register_type']) {
+            case 1:
             case '1':
                 if (!check('moble', $option['username'])) {
                     $this->error = '请输入合法的手机号码';
@@ -308,6 +313,7 @@ class UserModel extends BaseModel
                 }
                 $saveField['moble'] = $option['username'];
                 break;
+            case 2:
             case '2':
                 if (!check('email', $option['username'])) {
                     $this->error = '请输入合法的邮箱地址';
@@ -315,6 +321,7 @@ class UserModel extends BaseModel
                 }
                 $saveField['email'] = $option['username'];
                 break;
+            case 3:
             case '3':
                 $saveField['username'] = $option['username'];
                 break;
@@ -348,11 +355,11 @@ class UserModel extends BaseModel
      * 修改用户信息
      *
      * @param array $option 请求参数
-     * @param integer $uid  用户ID
+     * @param integer|string $uid  用户ID
      * @param array $allow  数据库运行操作的字段
      * @return boolean
      */
-    public function edit(array $option, int $uid, array $allow = []): bool
+    public function edit(array $option, $uid, array $allow = []): bool
     {
         $check = $this->validate()->data($option)->scope('edit')->check();
         if (!$check) {
@@ -381,12 +388,12 @@ class UserModel extends BaseModel
      * 修改、重置密码
      *
      * @param array $option 请求参数
-     * @param integer $uid  用户ID
+     * @param integer|string $uid  用户ID
      * @param boolean $check_old_pwd 是否验证旧密码
      * @param boolean $is_pay_password 修改的密码是否为交易密码
      * @return boolean
      */
-    public function changePassword(array $option, int $uid, bool $check_old_pwd = true, bool $is_pay_password = false): bool
+    public function changePassword(array $option, $uid, bool $check_old_pwd = true, bool $is_pay_password = false): bool
     {
         $scope = $check_old_pwd ? 'password' : 'pwd';
         $check = $this->validate()->data($option)->scope($scope)->check();
@@ -428,14 +435,15 @@ class UserModel extends BaseModel
     /**
      * 更改绑定邮箱、手机号
      *
-     * @param integer $uid 用户ID
+     * @param integer|string $uid 用户ID
      * @param string $account 账号
      * @param integer $type 1手机号 2邮箱
      * @return boolean
      */
-    public function changeBindAccount(int $uid, string $account, int $type = 1): bool
+    public function changeBindAccount($uid, string $account, int $type = 1): bool
     {
         switch ($type) {
+            case 1:
             case '1':
                 if (!check('moble', $account)) {
                     $this->error = '请输入合法的手机号';
@@ -443,6 +451,7 @@ class UserModel extends BaseModel
                 }
                 $field = 'moble';
                 break;
+            case 2;
             case '2':
                 if (!check('email', $account)) {
                     $this->error = '请输入合法的邮箱地址';
@@ -475,10 +484,10 @@ class UserModel extends BaseModel
      * 修改用户状态
      *
      * @param array $option 请求参数
-     * @param integer $uid  用户ID
+     * @param integer|string $uid  用户ID
      * @return boolean
      */
-    public function changeStatus(array $option, int $uid): bool
+    public function changeStatus(array $option, $uid): bool
     {
         $check = $this->validate()->data($option)->scope('status')->check();
         if (!$check) {
@@ -545,10 +554,10 @@ class UserModel extends BaseModel
     /**
      * 获取用户ID转换的邀请码
      *
-     * @param integer $uid  用户ID
+     * @param integer|string $uid  用户ID
      * @return string
      */
-    public function getInviteCode(int $uid): string
+    public function getInviteCode($uid): string
     {
         $uid = intval($uid) + UCenter::instance()->getConfig('inviter_code', 0);
         return IdCode::instance()->id2code($uid);
