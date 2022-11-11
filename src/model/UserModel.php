@@ -573,7 +573,7 @@ class UserModel extends BaseModel
     protected function scopeList($query, $args)
     {
         $field = ['user.*', 'real.auth_type', 'real.auth_status', 'real.auth_time'];
-        $query->alias('user')->join(UserRealnameAuthModel::instance()->getTable() . ' real', 'user.id = real.uid', 'left')->field($field);
+        $query->alias('user')->join(UCenter::instance()->realnameAuth()->getTable() . ' real', 'user.id = real.uid', 'left')->field($field);
 
         // ID搜索
         if (isset($args['id']) && check('int', $args['id'])) {

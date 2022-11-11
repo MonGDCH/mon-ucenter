@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace support\auth;
+namespace support\ucenter;
 
 use mon\env\Config;
 use mon\util\Instance;

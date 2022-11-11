@@ -145,7 +145,7 @@ class UserLoginLogModel extends BaseModel
     protected function scopeList($query, $args)
     {
         $field = ['log.*', 'user.username', 'user.nickname', 'user.email', 'user.moble'];
-        $query->alias('log')->join(UserModel::instance()->getTable() . ' user', 'log.uid=user.id', 'left')->field($field);
+        $query->alias('log')->join(UCenter::instance()->user()->getTable() . ' user', 'log.uid=user.id', 'left')->field($field);
         // 按邮箱
         if (isset($args['email']) && is_string($args['email']) && !empty($args['email'])) {
             $query->whereLike('user.email', trim($args['email']));
